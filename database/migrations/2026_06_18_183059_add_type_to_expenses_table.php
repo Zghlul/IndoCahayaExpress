@@ -8,15 +8,15 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::table('invoices', function (Blueprint $table) {
-            $table->decimal('aramex_surcharge', 15, 2)->default(0)->after('war_risk_charge');
+        Schema::table('expenses', function (Blueprint $table) {
+            $table->enum('type', ['daily', 'fixed'])->default('daily')->after('category');
         });
     }
 
     public function down()
     {
-        Schema::table('invoices', function (Blueprint $table) {
-            $table->dropColumn('aramex_surcharge');
+        Schema::table('expenses', function (Blueprint $table) {
+            $table->dropColumn('type');
         });
     }
 };

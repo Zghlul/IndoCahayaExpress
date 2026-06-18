@@ -408,7 +408,7 @@
 <div class="exp-shell">
     <div class="exp-container">
 
-        {{-- ═══ FLASH NOTIF ═══ --}}
+        {{-- FLASH NOTIF --}}
         @if(session('success') || session('error'))
         <div id="flash-notif">
             <div class="fn-icon {{ session('success') ? 'success' : 'error' }}">
@@ -429,7 +429,7 @@
         <script>setTimeout(() => document.getElementById('flash-notif')?.remove(), 4500);</script>
         @endif
 
-        {{-- ═══ HERO ═══ --}}
+        {{-- HERO --}}
         <section class="exp-hero">
             <div class="exp-hero-inner">
                 <div class="exp-hero-text">
@@ -457,7 +457,7 @@
             </div>
         </section>
 
-        {{-- ═══ STATS ═══ --}}
+        {{-- STATS --}}
         <section class="exp-stats">
             <div class="e-stat" data-accent="red">
                 <div class="e-stat-head">
@@ -525,7 +525,7 @@
             </div>
         </section>
 
-        {{-- ═══ FILTER ═══ --}}
+        {{-- FILTER --}}
         <div class="e-filter-card">
             <form method="GET" action="{{ route('admin.expenses') }}">
                 <div class="e-filter-row">
@@ -560,6 +560,15 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="e-filter-group">
+                        <span class="e-filter-lbl">Tipe</span>
+                        <select name="type" class="e-filter-select">
+                            <option value="">Semua Tipe</option>
+                            @foreach($types as $key => $label)
+                                <option value="{{ $key }}" {{ $filterType == $key ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="e-filter-group" style="justify-content:flex-end;">
                         <span class="e-filter-lbl">&nbsp;</span>
                         <div style="display:flex;gap:0.5rem;">
@@ -576,7 +585,7 @@
             </form>
         </div>
 
-        {{-- ═══ CATEGORY TABLES ═══ --}}
+        {{-- CATEGORY TABLES --}}
         @php
             $operasional = $expenses->where('category', 'operasional');
             $gaji        = $expenses->where('category', 'gaji');
@@ -605,6 +614,7 @@
                             <th>Tanggal</th>
                             <th>Jenis</th>
                             <th>Deskripsi</th>
+                            <th>Tipe</th>
                             <th>Jumlah</th>
                             <th>Aksi</th>
                         </tr>
@@ -623,6 +633,7 @@
                                 </select>
                             </td>
                             <td>{{ $expense->description }}</td>
+                            <td><span class="subtype-badge {{ $expense->type == 'fixed' ? 'subtype-gaji' : 'subtype-operasional' }}">{{ $expense->type == 'fixed' ? 'Tetap' : 'Harian' }}</span></td>
                             <td class="amount-cell">{{ rupiah($expense->amount) }}</td>
                             <td>
                                 <div class="act-btns">
@@ -648,7 +659,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="e-empty">
                                     <div class="e-empty-icon">
                                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -685,6 +696,7 @@
                             <th>Tanggal</th>
                             <th>Karyawan / Jabatan</th>
                             <th>Deskripsi</th>
+                            <th>Tipe</th>
                             <th>Jumlah</th>
                             <th>Aksi</th>
                         </tr>
@@ -704,6 +716,7 @@
                                 </select>
                             </td>
                             <td>{{ $expense->description }}</td>
+                            <td><span class="subtype-badge {{ $expense->type == 'fixed' ? 'subtype-gaji' : 'subtype-operasional' }}">{{ $expense->type == 'fixed' ? 'Tetap' : 'Harian' }}</span></td>
                             <td class="amount-cell">{{ rupiah($expense->amount) }}</td>
                             <td>
                                 <div class="act-btns">
@@ -729,7 +742,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="e-empty">
                                     <div class="e-empty-icon">
                                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -766,6 +779,7 @@
                             <th>Tanggal</th>
                             <th>Jenis Marketing</th>
                             <th>Deskripsi</th>
+                            <th>Tipe</th>
                             <th>Jumlah</th>
                             <th>Aksi</th>
                         </tr>
@@ -785,6 +799,7 @@
                                 </select>
                             </td>
                             <td>{{ $expense->description }}</td>
+                            <td><span class="subtype-badge {{ $expense->type == 'fixed' ? 'subtype-gaji' : 'subtype-operasional' }}">{{ $expense->type == 'fixed' ? 'Tetap' : 'Harian' }}</span></td>
                             <td class="amount-cell">{{ rupiah($expense->amount) }}</td>
                             <td>
                                 <div class="act-btns">
@@ -810,7 +825,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="e-empty">
                                     <div class="e-empty-icon">
                                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -850,6 +865,7 @@
                             <th>Tanggal</th>
                             <th>Jenis Admin</th>
                             <th>Deskripsi</th>
+                            <th>Tipe</th>
                             <th>Jumlah</th>
                             <th>Aksi</th>
                         </tr>
@@ -869,6 +885,7 @@
                                 </select>
                             </td>
                             <td>{{ $expense->description }}</td>
+                            <td><span class="subtype-badge {{ $expense->type == 'fixed' ? 'subtype-gaji' : 'subtype-operasional' }}">{{ $expense->type == 'fixed' ? 'Tetap' : 'Harian' }}</span></td>
                             <td class="amount-cell">{{ rupiah($expense->amount) }}</td>
                             <td>
                                 <div class="act-btns">
@@ -894,7 +911,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="e-empty">
                                     <div class="e-empty-icon">
                                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -933,6 +950,7 @@
                             <th>Tanggal</th>
                             <th>Kategori</th>
                             <th>Deskripsi</th>
+                            <th>Tipe</th>
                             <th>Jumlah</th>
                             <th>Aksi</th>
                         </tr>
@@ -952,6 +970,7 @@
                                 </select>
                             </td>
                             <td>{{ $expense->description }}</td>
+                            <td><span class="subtype-badge {{ $expense->type == 'fixed' ? 'subtype-gaji' : 'subtype-operasional' }}">{{ $expense->type == 'fixed' ? 'Tetap' : 'Harian' }}</span></td>
                             <td class="amount-cell">{{ rupiah($expense->amount) }}</td>
                             <td>
                                 <div class="act-btns">
@@ -977,7 +996,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <div class="e-empty">
                                     <div class="e-empty-icon">
                                         <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -998,7 +1017,7 @@
     </div>{{-- /container --}}
 </div>{{-- /shell --}}
 
-{{-- ══════════════════ MODAL TAMBAH / EDIT ══════════════════ --}}
+{{-- MODAL --}}
 <div id="expenseModal" class="modal-overlay {{ $editExpense ? 'open' : '' }}" onclick="handleOverlayClick(event, 'expenseModal')">
     <div class="modal-box">
         <div class="modal-hdr">
@@ -1032,6 +1051,13 @@
                         <input type="date" name="expense_date" class="modal-input" required
                                value="{{ $editExpense ? $editExpense->expense_date : date('Y-m-d') }}">
                     </div>
+                </div>
+                <div class="modal-field">
+                    <label class="modal-label">Tipe Pengeluaran</label>
+                    <select name="type" class="modal-select" required>
+                        <option value="daily" {{ $editExpense && $editExpense->type == 'daily' ? 'selected' : '' }}>Harian</option>
+                        <option value="fixed" {{ $editExpense && $editExpense->type == 'fixed' ? 'selected' : '' }}>Tetap (Bulanan)</option>
+                    </select>
                 </div>
                 <div class="modal-field">
                     <label class="modal-label">Jumlah (Rp)</label>

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
@@ -98,5 +98,40 @@ class SettingsController extends Controller
 
         Cache::forget('global_settings');
         return back()->with('flash_settings', 'Semua pengaturan telah direset ke default.');
+    }
+    /**
+     * Simpan pengaturan berdasarkan action dari form.
+     */
+    public function save(Request $request)
+    {
+        $action = $request->input('action');
+
+        switch ($action) {
+            case 'save_general':
+                return $this->saveGeneral($request);
+            case 'save_smtp':
+                return $this->saveSmtp($request);
+            case 'save_shipping':
+                return $this->saveShipping($request);
+            case 'save_security':
+                return $this->saveSecurity($request);
+            case 'save_api':
+                return $this->saveApi($request);
+            default:
+                return back()->with('flash_settings', 'Aksi tidak valid.');
+        }
+    }
+
+    /**
+     * Toggle maintenance mode via AJAX.
+     */
+    public function toggleMaintenance(Request $request)
+    {
+        $current = Setting::get('maintenance_mode', '0');
+        $new = $current == '1' ? '0' : '1';
+        Setting::set('maintenance_mode', $new);
+        Cache::forget('global_settings');
+
+        return response()->json(['success' => true, 'mode' => $new]);
     }
 }

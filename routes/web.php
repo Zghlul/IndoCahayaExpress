@@ -9,7 +9,11 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\UserDashboardController;
 use App\Http\Middleware\MaintenanceMode;
 use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\Api\ShipmentNotificationController;
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RateController;
+use App\Http\Controllers\SettingsController;
+
 
 
 // ==================== SEMUA RUTE DIBUNGKUS DENGAN MIDDLEWARE MAINTENANCE ====================
@@ -36,7 +40,7 @@ Route::middleware(MaintenanceMode::class)->group(function () {
     Route::get('/tracking', [TrackingController::class, 'index'])->name('tracking.index');
     Route::post('/tracking', [TrackingController::class, 'track'])->name('tracking.track');
     Route::get('/test-permission', function () {
-    
+
         if (auth()->user()->hasPermission('access admin panel')) {
             return 'Anda punya akses admin panel';
         }
@@ -56,59 +60,58 @@ Route::middleware(MaintenanceMode::class)->group(function () {
         Route::post('/orders/available-services', [OrderController::class, 'getAvailableServices'])->name('orders.available-services');
 
         // Invoices
-        Route::get('/invoices', [AdminController::class, 'invoices'])->name('admin.invoices.index');
-        Route::post('/invoices/mark-paid/{hashid}', [AdminController::class, 'markInvoicePaid'])->name('invoices.mark-paid');
-        Route::get('/invoices/delete/{hashid}', [AdminController::class, 'deleteInvoice'])->name('invoices.delete');
-        Route::get('/create-invoice', [AdminController::class, 'createInvoice'])->name('create-invoice');
-        Route::get('/invoice-edit/{hashid}', [AdminController::class, 'editInvoice'])->name('invoice.edit');
-        Route::put('/invoices/update/{hashid}', [AdminController::class, 'updateInvoice'])->name('invoice.update');
-        Route::post('/invoices/store', [AdminController::class, 'storeInvoice'])->name('invoices.store');
+        Route::get('/invoices', [InvoiceController::class, 'index'])->name('admin.invoices.index');
+        Route::post('/invoices/mark-paid/{hashid}', [InvoiceController::class, 'markInvoicePaid'])->name('invoices.mark-paid');
+        Route::get('/invoices/delete/{hashid}', [InvoiceController::class, 'deleteInvoice'])->name('invoices.delete');
+        Route::get('/create-invoice', [InvoiceController::class, 'createInvoice'])->name('create-invoice');
+        Route::get('/invoice-edit/{hashid}', [InvoiceController::class, 'editInvoice'])->name('invoice.edit');
+        Route::put('/invoices/update/{hashid}', [InvoiceController::class, 'updateInvoice'])->name('invoice.update');
+        Route::post('/invoices/store', [InvoiceController::class, 'storeInvoice'])->name('invoices.store');
 
         Route::get('/ranking', [AdminController::class, 'ranking'])->name('admin.ranking');
 
         // Rates (lihat saja boleh semua admin, tetapi edit/delete/reset hanya dev)
-        Route::get('/rates', [AdminController::class, 'rates'])->name('admin.rates');
-        Route::post('/rates/update-rate', [AdminController::class, 'updateRate'])->name('admin.rates.update');
+        Route::get('/rates', [RateController::class, 'index'])->name('admin.rates');
+        Route::post('/rates/update-rate', [RateController::class, 'update'])->name('admin.rates.update');
 
-        // Reports (semua admin boleh lihat)
-        Route::get('/reports', [AdminController::class, 'reports'])->name('admin.reports');
-        Route::get('/reports/export', [AdminController::class, 'exportReport'])->name('admin.reports.export');
+        // ============================================================
+        // LAPORAN & PENGELUARAN — sekarang menggunakan ReportController
+        // ============================================================
+        Route::get('/reports', [ReportController::class, 'reports'])->name('admin.reports');
+        Route::get('/reports/export', [ReportController::class, 'exportReport'])->name('admin.reports.export');
 
-        // Expenses (semua admin boleh lihat)
-        Route::get('/expenses', [AdminController::class, 'expenses'])->name('admin.expenses');
-        Route::post('/expenses/save', [AdminController::class, 'saveExpense'])->name('admin.expenses.save');
-        Route::get('/expenses/delete/{id}', [AdminController::class, 'deleteExpense'])->name('admin.expenses.delete');
-        Route::get('/expenses/export', [AdminController::class, 'exportExpenses'])->name('admin.expenses.export');
-
-         Route::get('/check-new-shipments', [ShipmentNotificationController::class, 'checkNew']);
+        Route::get('/expenses', [ReportController::class, 'expenses'])->name('admin.expenses');
+        Route::post('/expenses/save', [ReportController::class, 'saveExpense'])->name('admin.expenses.save');
+        Route::get('/expenses/delete/{id}', [ReportController::class, 'deleteExpense'])->name('admin.expenses.delete');
+        Route::get('/expenses/export', [ReportController::class, 'exportExpenses'])->name('admin.expenses.export');
 
         // ==================== RUTE KHUSUS DEVELOPER (middleware 'dev') ====================
         // Hanya role 'dev' (dan 'owner' jika Anda tambahkan di middleware) yang bisa akses
         Route::middleware(['dev'])->group(function () {
             // Manajemen negara
-            Route::post('/rates/add-country', [AdminController::class, 'addCountry'])->name('admin.rates.add-country');
-            Route::post('/rates/update-country', [AdminController::class, 'updateCountry'])->name('admin.rates.update-country');
-            Route::post('/rates/delete-country', [AdminController::class, 'deleteCountry'])->name('admin.rates.delete-country');
-            Route::get('/rates/reset', [AdminController::class, 'resetRates'])->name('admin.rates.reset');
+            Route::post('/rates/add-country', [RateController::class, 'addCountry'])->name('admin.rates.add-country');
+            Route::post('/rates/update-country', [RateController::class, 'updateCountry'])->name('admin.rates.update-country');
+            Route::post('/rates/delete-country', [RateController::class, 'deleteCountry'])->name('admin.rates.delete-country');
+            Route::get('/rates/reset', [RateController::class, 'reset'])->name('admin.rates.reset');
 
             // Settings (seluruh manajemen setting hanya dev)
-            Route::get('/settings', [AdminController::class, 'settings'])->name('admin.settings');
-            Route::post('/settings/save', [AdminController::class, 'saveSettings'])->name('admin.settings.save');
-            Route::post('/settings/maintenance', [AdminController::class, 'toggleMaintenance'])->name('admin.maintenance.toggle');
-            Route::post('/settings/clear-cache', [AdminController::class, 'clearCache'])->name('admin.settings.clear-cache');
-            Route::post('/settings/reset', [AdminController::class, 'resetSettings'])->name('admin.settings.reset');
+            Route::get('/settings', [SettingsController::class, 'index'])->name('admin.settings');
+            Route::post('/settings/save', [SettingsController::class, 'save'])->name('admin.settings.save');
+            Route::post('/settings/maintenance', [SettingsController::class, 'toggleMaintenance'])->name('admin.maintenance.toggle');
+            Route::post('/settings/clear-cache', [SettingsController::class, 'clearCache'])->name('admin.settings.clear-cache');
+            Route::post('/settings/reset', [SettingsController::class, 'resetSettings'])->name('admin.settings.reset');
 
             // Members (seluruh manajemen member hanya dev)
-            Route::get('/members', [AdminController::class, 'members'])->name('d-e-v.members');
-            Route::post('/members/save', [AdminController::class, 'saveMember'])->name('admin.members.save');
-            Route::get('/members/delete/{id}', [AdminController::class, 'deleteMember'])->name('admin.members.delete');
-            Route::post('/members/bulk-delete', [AdminController::class, 'bulkDeleteMembers'])->name('admin.members.bulk-delete');
-            Route::get('/members/edit/{id}', [AdminController::class, 'editMember'])->name('admin.members.edit');
+            Route::get('/members', [MemberController::class, 'index'])->name('d-e-v.members');
+            Route::post('/members/save', [MemberController::class, 'save'])->name('admin.members.save');
+            Route::get('/members/delete/{id}', [MemberController::class, 'delete'])->name('admin.members.delete');
+            Route::post('/members/bulk-delete', [MemberController::class, 'bulkDelete'])->name('admin.members.bulk-delete');
+            Route::get('/members/edit/{id}', [MemberController::class, 'edit'])->name('admin.members.edit');
         });
     });
 
     // AJAX endpoint (boleh diakses asal login, tapi pastikan di controller ada pengecekan permission)
-    Route::get('/ajax/shipments-by-customer', [AdminController::class, 'ajaxShipmentsByCustomer'])->name('ajax.shipments.by.customer');
+    Route::get('/ajax/shipments-by-customer', [InvoiceController::class, 'ajaxShipmentsByCustomer'])->name('ajax.shipments.by.customer');
 
     // Rute untuk user yang sudah login (customer)
     Route::middleware(['auth'])->group(function () {
@@ -117,5 +120,4 @@ Route::middleware(MaintenanceMode::class)->group(function () {
         Route::get('/invoices', [UserDashboardController::class, 'invoices'])->name('invoices');
         Route::get('/invoice/{hashid}', [InvoiceController::class, 'show'])->name('invoice.detail');
     });
-
 }); // ── AKHIR DARI GROUP MAINTENANCE MIDDLEWARE ──

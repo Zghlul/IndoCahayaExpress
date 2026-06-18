@@ -26,13 +26,34 @@ class OrderController extends Controller
      * Daftar negara yang TIDAK dikenakan pajak tambahan Aramex (FLASH)
      */
     private $aramexExceptionCountries = [
-        'Afghanistan', 'Armenia', 'Azerbaijan', 'Brunei',
-        'Cambodia', 'China', 'Hong Kong', 'Indonesia',
-        'Japan', 'Kazakhstan', 'Kyrgyzstan', 'Laos',
-        'Macau', 'Malaysia', 'Mongolia', 'Myanmar',
-        'Philippines', 'Singapore', 'South Korea', 'Taiwan',
-        'Tajikistan', 'Thailand', 'Timor-Leste', 'Turkmenistan',
-        'Uzbekistan', 'Vietnam', 'Australia', 'New Zealand',
+        'Afghanistan',
+        'Armenia',
+        'Azerbaijan',
+        'Brunei',
+        'Cambodia',
+        'China',
+        'Hong Kong',
+        'Indonesia',
+        'Japan',
+        'Kazakhstan',
+        'Kyrgyzstan',
+        'Laos',
+        'Macau',
+        'Malaysia',
+        'Mongolia',
+        'Myanmar',
+        'Philippines',
+        'Singapore',
+        'South Korea',
+        'Taiwan',
+        'Tajikistan',
+        'Thailand',
+        'Timor-Leste',
+        'Turkmenistan',
+        'Uzbekistan',
+        'Vietnam',
+        'Australia',
+        'New Zealand',
         'Fiji'
     ];
 
@@ -54,11 +75,11 @@ class OrderController extends Controller
         }
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('tracking_number', 'LIKE', "%$search%")
-                  ->orWhere('negara', 'LIKE', "%$search%")
-                  ->orWhere('nama_customer', 'LIKE', "%$search%")
-                  ->orWhere('nama_penerima', 'LIKE', "%$search%");
+                    ->orWhere('negara', 'LIKE', "%$search%")
+                    ->orWhere('nama_customer', 'LIKE', "%$search%")
+                    ->orWhere('nama_penerima', 'LIKE', "%$search%");
             });
         }
         if ($request->filled('date_from')) {
@@ -77,7 +98,7 @@ class OrderController extends Controller
 
         $shipments = $query->orderBy('id', 'desc')->paginate(15);
         $shipments->load('invoices');
-        
+
         $countries = DB::table('countries')->orderBy('country_name')->get();
 
         return view('admin.orders', compact('shipments', 'stats', 'countries'));
@@ -118,7 +139,7 @@ class OrderController extends Controller
         ]);
 
         $shipment = Shipment::findOrFail($request->id);
-        
+
         // Simpan nilai lama untuk field yang mempengaruhi DDP (negara, declare_value_usd)
         $oldNegara = $shipment->negara;
         $oldDeclareValue = $shipment->declare_value_usd;
@@ -164,6 +185,10 @@ class OrderController extends Controller
             }
         }
 
+        // 🔽 HITUNG MODAL DARI RATES & SIMPAN
+        $modalResult = $this->getModalFromTable($shipment->service, $shipment->negara, $beratDibebankan);
+        $shipment->modal = $modalResult['modal'] ?? 0;
+
         $shipment->save();
 
         // Sinkronisasi ke invoice item
@@ -172,7 +197,7 @@ class OrderController extends Controller
             // Update ongkir di item
             $invoiceItem->ongkir = $shipment->charge_idr;
             $invoiceItem->save();
-            
+
             // Recalculate invoice (subtotal, DDP, grand total)
             Invoice::recalculate($invoiceItem->invoice_id);
         }
@@ -229,7 +254,7 @@ class OrderController extends Controller
         Invoice::recalculate($invoice->id);
 
         return redirect()->route('invoice.detail', hashid_encode($invoice->id))
-                         ->with('success', 'Invoice berhasil dibuat.');
+            ->with('success', 'Invoice berhasil dibuat.');
     }
 
     public function calculatePrice(Request $request)
@@ -244,54 +269,81 @@ class OrderController extends Controller
         return response()->json($result);
     }
 
+    // ─── HELPER: AMBIL MODAL DARI RATES ──────────────────────
+
+    /**
+     * Ambil modal dari tabel rate berdasarkan service, negara, dan berat.
+     */
+    private function getModalFromTable($service, $negara, $berat)
+    {
+        $table = $this->tableMap[$service] ?? null;
+        if (!$table) return ['modal' => 0, 'out_of_range' => false];
+
+        $country = DB::table('countries')->where('country_name', $negara)->first();
+        if (!$country) return ['modal' => 0, 'out_of_range' => false];
+
+        $destId = $country->id;
+
+        if (!Schema::hasTable($table)) {
+            return ['modal' => 0, 'out_of_range' => false];
+        }
+
+        $rate = DB::table($table)
+            ->where('origin_country_id', 1)
+            ->where('destination_country_id', $destId)
+            ->where('weight_kg', '>=', $berat)
+            ->orderBy('weight_kg', 'asc')
+            ->first();
+
+        if ($rate) {
+            return ['modal' => (float) $rate->modal, 'out_of_range' => false];
+        }
+
+        return ['modal' => 0, 'out_of_range' => true];
+    }
+
     /**
      * Mendapatkan harga dari tabel rate berdasarkan service, negara, dan berat.
      * Mengambil rate dengan weight_kg >= berat (bracket berikutnya).
      */
     private function getPriceFromTable($service, $negara, $berat)
-{
-    $table = $this->tableMap[$service] ?? null;
-    if (!$table) return ['price' => 0, 'out_of_range' => false, 'max_weight' => null];
+    {
+        $table = $this->tableMap[$service] ?? null;
+        if (!$table) return ['price' => 0, 'out_of_range' => false, 'max_weight' => null];
 
-    $country = DB::table('countries')->where('country_name', $negara)->first();
-    if (!$country) return ['price' => 0, 'out_of_range' => false, 'max_weight' => null];
+        $country = DB::table('countries')->where('country_name', $negara)->first();
+        if (!$country) return ['price' => 0, 'out_of_range' => false, 'max_weight' => null];
 
-    $destId = $country->id;
+        $destId = $country->id;
 
-    if (!Schema::hasTable($table)) {
-        return ['price' => 0, 'out_of_range' => false, 'max_weight' => null];
+        if (!Schema::hasTable($table)) {
+            return ['price' => 0, 'out_of_range' => false, 'max_weight' => null];
+        }
+
+        $rate = DB::table($table)
+            ->where('origin_country_id', 1)
+            ->where('destination_country_id', $destId)
+            ->where('weight_kg', '>=', $berat)
+            ->orderBy('weight_kg', 'asc')
+            ->first();
+
+        if ($rate) {
+            return ['price' => (float) $rate->price, 'out_of_range' => false, 'max_weight' => null];
+        }
+
+        $maxWeight = DB::table($table)
+            ->where('origin_country_id', 1)
+            ->where('destination_country_id', $destId)
+            ->max('weight_kg');
+
+        return ['price' => 0, 'out_of_range' => true, 'max_weight' => $maxWeight];
     }
-
-    $rate = DB::table($table)
-        ->where('origin_country_id', 1)
-        ->where('destination_country_id', $destId)
-        ->where('weight_kg', '>=', $berat)
-        ->orderBy('weight_kg', 'asc')
-        ->first();
-
-    if ($rate) {
-        // TIDAK ADA TAMBAHAN SURCHARGE LAGI DI SINI
-        return ['price' => (float) $rate->price, 'out_of_range' => false, 'max_weight' => null];
-    }
-
-    $maxWeight = DB::table($table)
-        ->where('origin_country_id', 1)
-        ->where('destination_country_id', $destId)
-        ->max('weight_kg');
-
-    return ['price' => 0, 'out_of_range' => true, 'max_weight' => $maxWeight];
-}
 
     /**
      * Hitung pajak tambahan untuk layanan Aramex (FLASH)
-     *
-     * @param string $negara
-     * @param float $berat
-     * @return float
      */
     private function getAramexSurcharge($negara, $berat)
     {
-        // Jika negara termasuk pengecualian, tidak ada surcharge
         if (in_array($negara, $this->aramexExceptionCountries)) {
             return 0.0;
         }
@@ -307,8 +359,8 @@ class OrderController extends Controller
     {
         $request->validate([
             'negara' => 'required|string',
-            'weight' => 'required|numeric|min:0',        // berat dibebankan untuk umum
-            'physical_weight' => 'nullable|numeric|min:0', // berat fisik untuk REGULER
+            'weight' => 'required|numeric|min:0',
+            'physical_weight' => 'nullable|numeric|min:0',
         ]);
 
         $country = DB::table('countries')->where('country_name', $request->negara)->first();
@@ -317,13 +369,13 @@ class OrderController extends Controller
         }
 
         $weight = (float) $request->weight;
-        $physicalWeight = (float) ($request->physical_weight ?? $weight); // fallback ke weight jika tidak ada
+        $physicalWeight = (float) ($request->physical_weight ?? $weight);
 
         $vendors = [
             ['name' => 'PRIORITY',    'table' => 'dhl_rate',     'maxWeight' => 30],
             ['name' => 'FedEx',       'table' => 'fedex_rate',   'maxWeight' => 30],
             ['name' => 'US REGULER',  'table' => 'usps_rate',    'maxWeight' => 2.0],
-            ['name' => 'REGULER',     'table' => 'singpost_rate','maxWeight' => 2.0],
+            ['name' => 'REGULER',     'table' => 'singpost_rate', 'maxWeight' => 2.0],
             ['name' => 'FAST ASIAN',  'table' => 'tlx_rate',     'maxWeight' => 30.0],
             ['name' => 'FLASH',       'table' => 'aramex_rate',  'maxWeight' => 20.0],
             ['name' => 'FLASH AUSSY', 'table' => 'tge_rate',     'maxWeight' => 30.0],
@@ -331,7 +383,6 @@ class OrderController extends Controller
 
         $available = [];
         foreach ($vendors as $vendor) {
-            // Untuk REGULER (dan juga US REGULER jika perlu), gunakan berat fisik
             if ($vendor['name'] === 'REGULER') {
                 if ($physicalWeight > $vendor['maxWeight']) continue;
                 $checkWeight = $physicalWeight;
